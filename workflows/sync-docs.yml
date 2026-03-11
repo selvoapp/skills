@@ -1,0 +1,42 @@
+name: Sync Docs to Selvo
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/help-center/**'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          max_turns: 15
+          allowed_tools: "mcp__selvo__list_articles,mcp__selvo__get_article,mcp__selvo__create_article,mcp__selvo__update_article,mcp__selvo__search_articles,mcp__selvo__list_collections,mcp__selvo__create_collection,Read,Glob,Grep,Bash"
+          prompt: |
+            Files changed in docs/help-center/:
+            ${{ steps.changed.outputs.files }}
+
+            For each changed markdown file:
+            1. Read the file content
+            2. Search for an existing article with a matching title
+            3. If found, update it with the new content
+            4. If not found, create it as a draft in the appropriate collection
+
+            Use the Selvo MCP tools. Create articles as drafts.
+          mcp_config: |
+            {
+              "mcpServers": {
+                "selvo": {
+                  "type": "http",
+                  "url": "https://app.selvo.co/mcp",
+                  "headers": {
+                    "Authorization": "Bearer ${{ secrets.SELVO_API_KEY }}"
+                  }
+                }
+              }
+            }

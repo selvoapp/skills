@@ -1,0 +1,43 @@
+name: Changelog to Help Center
+on:
+  release:
+    types: [published]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          max_turns: 10
+          allowed_tools: "mcp__selvo__list_collections,mcp__selvo__create_article,mcp__selvo__search_articles,Read,Bash"
+          prompt: |
+            A new release was published:
+            Tag: ${{ github.event.release.tag_name }}
+            Name: ${{ github.event.release.name }}
+            Body:
+            <release-body>
+            ${{ github.event.release.body }}
+            </release-body>
+
+            Using the Selvo MCP server:
+            1. Find or create a "What's New" collection
+            2. Create a help center article summarizing this release
+            3. Write it for customers, not developers — no jargon
+            4. Save as draft for human review
+          mcp_config: |
+            {
+              "mcpServers": {
+                "selvo": {
+                  "type": "http",
+                  "url": "https://app.selvo.co/mcp",
+                  "headers": {
+                    "Authorization": "Bearer ${{ secrets.SELVO_API_KEY }}"
+                  }
+                }
+              }
+            }

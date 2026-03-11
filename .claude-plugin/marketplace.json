@@ -1,0 +1,24 @@
+{
+  "name": "selvo",
+  "owner": {
+    "name": "Selvo",
+    "email": "hello@selvo.co"
+  },
+  "metadata": {
+    "description": "Help center skills for generating and maintaining documentation on Selvo",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "selvo-help-center",
+      "description": "Generate and maintain help center articles from your codebase. Two skills: generate-help-center creates articles by analyzing your code, update-help-center detects and fixes stale docs.",
+      "source": "./",
+      "strict": false,
+      "keywords": ["help-center", "documentation", "knowledge-base", "mcp", "content"],
+      "skills": [
+        "./skills/generate-help-center",
+        "./skills/update-help-center"
+      ]
+    }
+  ]
+}
