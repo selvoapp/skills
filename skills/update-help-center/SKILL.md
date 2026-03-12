@@ -39,11 +39,17 @@ $ARGUMENTS — Optional: `--since "1 week ago"`, `--full-scan`, `--dry-run`
 Read the style guide first -- you will need it during classification, not just when writing:
 - `Read(references/style-guide.md)`
 
-Read the rejection memory:
-- If `.selvo/doc-update-rejections.json` exists in the project, read it.
-- Skip any suggestions that match a previously rejected article ID + type pair.
+Read the optional config file:
+- If `.selvo/docs.yaml` exists in the project, read it.
+- Use explicit `mappings` entries for classification and topic matching (checked before dynamic analysis).
+- Use `ignore` entries to skip additional paths.
+- Use `always_user_facing` entries to override internal classification.
 
-Read the mapping table before classifying changes:
+Read the dismissal memory:
+- If `.selvo/dismissed.yaml` exists in the project, read it.
+- Skip any suggestions that match a previously dismissed change description — UNLESS the code around that area has changed significantly since the dismissal date (check git log for the relevant paths). If it has, re-surface the suggestion once with a note: "Previously dismissed, but the code has changed since then."
+
+Read the mapping reference:
 - `Read(references/mapping.md)`
 
 ### Phase 1: DETECT — what changed
@@ -54,6 +60,12 @@ Determine the detection mode:
 - Default: `git log --oneline -20` then `git diff HEAD~5 --name-only`
 
 For each changed file, classify as USER-FACING or INTERNAL:
+
+If `.selvo/docs.yaml` was loaded:
+- Check `always_user_facing` patterns first — any match is USER-FACING.
+- Check `ignore` patterns — any match is skipped entirely.
+- Check `mappings[].paths` — any match uses the mapping's `topic` for article matching.
+- For files not covered by the config, fall back to the rules below.
 
 **USER-FACING** (require doc review):
 - UI component changes visible to end users
@@ -180,27 +192,27 @@ If `--dry-run` flag is provided:
 - Present the full report
 - Do NOT make any changes to the help center
 
-### Rejection memory
+### Dismissal memory
 
 If the user declines a suggested update:
-- Note the article ID and the type of suggestion rejected
+- Note what was suggested and why it was dismissed
 - Do not re-suggest the same change in this session
-- If `.selvo/doc-update-rejections.json` exists, append the rejection:
+- If `.selvo/dismissed.yaml` exists, append the dismissal. If not, create it (and the `.selvo/` directory if needed):
 
-```json
-{
-  "rejections": [
-    {
-      "article_id": "art_...",
-      "type": "stale",
-      "reason": "User: 'This is intentionally different from the code'",
-      "date": "2026-03-11"
-    }
-  ]
-}
+```yaml
+version: 1
+dismissed:
+  - change: "Update webhook configuration section in 'Setting up webhooks'"
+    reason: "Intentionally different from code — shows simplified example"
+    date: 2026-03-12
+    article: "Setting up webhooks"
+  - change: "Document internal rate limiting middleware"
+    reason: "Internal implementation detail, not user-facing"
+    date: 2026-03-11
+    article: "API Rate Limits"
 ```
 
-Create the file if it does not exist. Create the `.selvo/` directory if needed.
+Change-based reconsideration: when checking dismissed items, run `git log --since="{dismissed date}" --name-only` for the relevant code paths. If significant changes have occurred since dismissal, re-surface the suggestion ONCE with: "This was previously dismissed on {date} because: '{reason}'. However, the related code has changed since then. Worth another look?"
 
 ### Report format
 

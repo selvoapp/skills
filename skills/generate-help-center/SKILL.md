@@ -192,3 +192,26 @@ Present a summary when done:
 
 All articles are saved as drafts. Review them in your Selvo dashboard
 at https://app.selvo.co and publish when ready."
+
+### Step 5b: Offer to save codebase mapping
+
+After reporting results, offer to save the codebase analysis as a mapping file for the update skill:
+
+"I can save the codebase-to-topic mapping I used to a config file (`.selvo/docs.yaml`).
+This helps the `/update-help-center` skill match future code changes to articles more precisely.
+
+Want me to create it?"
+
+If the user says yes:
+1. Generate `.selvo/docs.yaml` based on the mappings discovered in Step 1.
+2. Include `version: 1` header.
+3. Map each collection's source files to a topic entry under `mappings`.
+4. Add common internal paths to `ignore` (test files, build config, lock files).
+5. Add any paths that required judgment calls to `always_user_facing` if they were classified as user-facing.
+6. Create the `.selvo/` directory if it does not exist.
+7. Write the file and confirm:
+
+"Saved `.selvo/docs.yaml` with [N] mappings. The `/update-help-center` skill will use this
+for more precise change detection. You can edit it anytime."
+
+If the user says no, skip silently. Never auto-create this file.

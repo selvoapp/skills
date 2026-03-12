@@ -65,7 +65,7 @@ Reads your README, routes, config, and APIs. Creates structured articles organiz
 
 ### /update-help-center
 
-Three-phase pipeline: detect code changes, match to existing articles, decide what to update. Supports surgical section-level edits, dry-run mode, and rejection memory.
+Three-phase pipeline: detect code changes, match to existing articles, decide what to update. Supports surgical section-level edits, dry-run mode, and dismissal memory.
 
 ```
 /update-help-center
