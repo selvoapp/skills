@@ -8,7 +8,7 @@ description: >
 disable-model-invocation: true
 metadata:
   author: Selvo
-  version: 1.1.0
+  version: 2.0.0
   mcp-server: selvo
 allowed-tools:
   - mcp__selvo__get_help_center
@@ -23,6 +23,7 @@ allowed-tools:
   - Glob
   - Grep
   - Bash
+  - Write
 ---
 
 Generate help center articles for a product by analyzing its codebase
@@ -41,7 +42,14 @@ $ARGUMENTS — Optional: specific topics to focus on, or "all" for full generati
      ```
    - Get an API key from Settings > API Keys in the Selvo dashboard.
 
-2. Check existing content:
+2. Check for an existing generation plan:
+   - If `.selvo/generation-plan.json` exists, read it.
+   - If `status` is `"in_progress"`, offer to resume:
+     "You have a generation in progress — [N] of [M] articles created. Resume from where you left off?"
+   - If the user says yes, skip to Step 4 and continue from the first uncreated article.
+   - If the user says no, delete the plan file and start fresh.
+
+3. Check existing content:
    - Call `list_collections` and `list_articles` to see what already exists.
    - If articles already exist, ask the user:
      "Your help center already has [N] articles in [M] collections.
@@ -65,19 +73,91 @@ Always draft, never auto-publish. The human reviews before anything goes live.
 
 ### Step 1: Analyze the codebase
 
-Read these files to build a mental model of the product:
-- `README.md` — product description, features, setup instructions
-- `package.json` — product name, dependencies, scripts
-- Glob `src/app/**/page.tsx` or equivalent routing files (features, pages)
-- Glob `src/config/**` or equivalent config files (settings, options)
-- Glob `src/app/api/**` or `src/lib/actions/**` (API surface)
-- Any `CHANGELOG.md` or `docs/` directory
+Discovery happens in two passes. Pass 1 is cheap — file names and manifests only, no reading source code. Pass 2 reads a small number of strategic files identified by Pass 1. The goal is to build a mental model of what users can DO in this product, not to read every file.
+
+#### Pass 1: Identify the project and its structure
+
+1. **Read the manifest file** to identify the project type:
+   - `package.json` → Node.js. Check `dependencies` for framework (Next.js, Express, Fastify, NestJS, Remix, Nuxt, SvelteKit, etc.)
+   - `requirements.txt` / `pyproject.toml` / `setup.py` → Python. Check for Django, Flask, FastAPI, Starlette.
+   - `Gemfile` → Ruby. Check for Rails, Sinatra.
+   - `go.mod` → Go. Check for Gin, Echo, Fiber, Chi, or stdlib `net/http`.
+   - `Cargo.toml` → Rust. Check for Actix, Axum, Rocket.
+   - `composer.json` → PHP. Check for Laravel, Symfony.
+   - `mix.exs` → Elixir. Check for Phoenix.
+   - `pom.xml` / `build.gradle` → Java/Kotlin. Check for Spring Boot.
+   - `pubspec.yaml` → Dart/Flutter.
+   - No manifest → check for `index.html` (static site), `Dockerfile`, or `Makefile`.
+
+2. **Read `README.md`** (if it exists) for the product description, features, and setup instructions.
+
+3. **Run a file tree scan** to understand the directory structure. Do not read source files yet. You are looking for:
+   - Where source code lives (`src/`, `app/`, `lib/`, `internal/`, `pkg/`)
+   - Where config lives (`config/`, `.env.example`, settings files)
+   - Where docs live (`docs/`, `CHANGELOG.md`)
+   - Obvious feature groupings from directory names
+   - Component and service files that hint at features (a file called `RestTimer.tsx` or `billing-service.ts` tells you a lot)
+
+   Use Bash: `find . -type f -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/vendor/*' -not -path '*/__pycache__/*' -not -path '*/dist/*' -not -path '*/build/*' -not -path '*/.next/*' | head -200`
+
+4. **Record what you found:**
+   - Project type: web app / CLI / mobile app / desktop app / library / API / static site
+   - Framework and language
+   - Source root and directory layout
+   - Routing style: file-based / config-based / decorator-based / unknown
+
+#### Pass 2: Find features by reading entry points
+
+You now know the framework. Use your knowledge of that framework to read the RIGHT files — not all files. You are looking for the product's user-facing surface: what can users see, click, configure, or call?
+
+**For file-based routing** (Next.js App Router, SvelteKit, Nuxt, Remix, Astro):
+- Glob the routing convention for the framework (e.g., `app/**/page.tsx` for Next.js App Router, `src/routes/**/+page.svelte` for SvelteKit). Read these files. Each file is a route. Each route is a potential feature to document.
+
+**For config-based routing** (React Router, Vue Router, TanStack Router, Angular):
+- Find the router configuration file — usually imported in the app's entry point (`src/App.tsx`, `src/router.tsx`, `src/router/index.ts`, `src/app-routing.module.ts`). Read it. It lists all routes and what components they render.
+
+**For decorator-based routing** (Express, Flask, FastAPI, Django, Rails, Laravel, Go, Rust, Phoenix):
+- Read the routing entry point for the framework:
+  - Express/Fastify: `app.js`, `server.js`, or `index.js` — follow imports to route files
+  - Flask/FastAPI: grep for `@app.route` or `@router.get` — these are the routes
+  - Django: find and read `urls.py` files — they list all URL patterns
+  - Rails: read `config/routes.rb` — it lists all routes
+  - Laravel: read `routes/web.php` and `routes/api.php`
+  - Go: grep for `HandleFunc`, `router.GET`, or equivalent
+  - Phoenix: read `router.ex`
+- You may need to follow 1-2 levels of imports to find all routes. That is fine.
+
+**For CLIs:**
+- Find the command definitions. Look for `yargs`, `commander`, `cobra`, `click`, `clap`, `argparse`, or the framework's command registration. Each command is a feature to document.
+
+**For libraries/SDKs:**
+- Find the public API. Look at the main export file (`index.ts`, `lib.rs`, `__init__.py`, the `main` or `exports` field in the manifest). Each exported function, class, or module is a potential feature to document.
+
+**For mobile apps:**
+- Find the navigation/screen definitions. React Native: look for `Navigator`, `Stack.Screen`. Flutter: look for `MaterialApp`, route definitions. Swift: look for `UIViewController` subclasses or SwiftUI views.
+
+**For monorepos:**
+- Check for `apps/`, `packages/`, or workspace config. Ask the user which app to document, or document each app separately.
+
+**For anything else:**
+- Read the entry point file (whatever the manifest points to) and follow imports one level. The structure will reveal itself.
+- If you cannot determine the framework or find the entry points, ask the user: "I can see this is a [language] project but I'm not sure how it's structured. Can you point me to the main routing or entry point file?"
+
+After reading the routing/entry files, also note:
+- What imports each route pulls in that sound like user-facing features (hooks, services, controllers — not utilities like `cn`, `formatDate`, `dbClient`)
+- Config files that define user-visible settings or feature flags
+- API route handlers (if the product has an API users call directly)
+- Any `CHANGELOG.md` for recent feature additions
+
+#### What you should know after Step 1
 
 Build a mental model of:
 - What the product does (from README)
-- What features it has (from routes and pages)
-- What settings it exposes (from config files)
-- What APIs it offers (from API routes or server actions)
+- What features it has (from routes, commands, screens, or public API)
+- What settings it exposes (from config)
+- What APIs it offers (from API routes, if applicable)
+- What the user's primary workflow is (the main thing they do)
+- For each feature: which source files contain the implementation logic (you will read these in Step 4, not now)
 
 ### Step 1b: Think like the customer
 
@@ -121,7 +201,7 @@ For each collection, write a 1-sentence description of what the reader will find
 For each planned article, note:
 - Title (in the customer's language)
 - Target collection
-- Key codebase files that inform the content
+- Key codebase files that inform the content (the files you will read in Step 4)
 - Article type: getting-started, how-to, informational, reference, troubleshooting, faq, or integration-guide
 - Order within the collection (frequency-based or workflow sequence)
 
@@ -140,6 +220,32 @@ Shall I proceed, or would you like to adjust?"
 
 Wait for confirmation before Step 3.
 
+After the user approves, save the plan to `.selvo/generation-plan.json`:
+
+```json
+{
+  "version": 1,
+  "collections": [
+    {
+      "name": "Getting Started",
+      "description": "Set up your account and complete your first task",
+      "articles": [
+        {
+          "title": "Creating Your Account",
+          "source_files": ["app/register/page.tsx", "lib/auth.ts"],
+          "type": "getting-started",
+          "collection_id": null
+        }
+      ]
+    }
+  ],
+  "created": [],
+  "status": "in_progress"
+}
+```
+
+Create the `.selvo/` directory if it does not exist. This file is your bookmark — it survives context limits and allows resuming if the session ends mid-run.
+
 ### Step 3: Create collections
 
 For each planned collection:
@@ -147,6 +253,7 @@ For each planned collection:
 2. If it does not exist, call `create_collection` with name, description, and icon.
 3. If the plan includes subcollections, create the parent collection first, then create each subcollection with `parent_collection_id` set to the parent's ID.
 4. Record the `collection_id` for article assignment. Articles go into the subcollection they belong to, not the parent.
+5. Update the plan file with the assigned `collection_id` values.
 
 ### Step 4: Generate and create articles
 
@@ -164,7 +271,10 @@ When writing articles, actively use Selvo's content blocks:
 Every article is a product showcase. The blocks you use demonstrate what the customer's own help center can look like.
 
 For each planned article:
-1. Read the relevant codebase files identified in Step 2.
+1. **Deep-dive: read the source files listed in the plan for this article.** This is where you read the actual implementation — the services, hooks, components, and controllers that contain HOW the feature works. Follow imports one level deep if needed:
+   - **Follow** imports whose names describe something a user would recognize as a feature (`useRestTimer`, `PaymentProcessor`, `DeloadSettings`, `PRCalculator`).
+   - **Skip** imports that describe developer plumbing (`cn`, `formatDate`, `dbClient`, `middleware`, `logger`, `withAuth`).
+   - Do not read files from previous articles unless they are listed for the current one.
 2. Generate the article content following the matching template.
 3. Follow the style guide exactly.
 4. **Search before create:** Call `search_articles(query: "[article topic]")` to check for duplicates.
@@ -175,6 +285,7 @@ For each planned article:
    - `content` (markdown, following the template)
    - `excerpt` (1-2 sentence summary, max 160 characters)
    - `status: "draft"` — ALWAYS draft, never auto-publish
+7. **Update the plan file:** add the article ID to the `created` array.
 
 ### Step 5: Report results
 
@@ -192,6 +303,8 @@ Present a summary when done:
 
 All articles are saved as drafts. Review them in your Selvo dashboard
 at https://app.selvo.co and publish when ready."
+
+Update the plan file: set `status` to `"complete"`. Then delete `.selvo/generation-plan.json` — it has served its purpose.
 
 ### Step 5b: Offer to save codebase mapping
 
