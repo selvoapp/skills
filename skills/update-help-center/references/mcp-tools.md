@@ -151,7 +151,7 @@ List all collections as a tree structure with subcollections and article counts.
       "name": "Getting Started",
       "description": "Set up and first steps",
       "slug": "getting-started",
-      "icon": "rocket",
+      "icon": "lucide:rocket",
       "article_count": 4,
       "subcollections": []
     }
@@ -181,7 +181,7 @@ Get a collection's details and its full article list.
   "name": "Getting Started",
   "description": "Set up and first steps",
   "slug": "getting-started",
-  "icon": "rocket",
+  "icon": "lucide:rocket",
   "parent_collection_id": null,
   "created_at": "2026-03-01T10:00:00Z",
   "updated_at": "2026-03-10T14:30:00Z",
@@ -376,7 +376,7 @@ Create a new collection. Collections can be nested up to one level deep.
 |-----------|------|----------|-------------|
 | `name` | string | Yes | Collection name |
 | `description` | string | No | Description shown on the collection page |
-| `icon` | string | No | Emoji or icon identifier |
+| `icon` | string | No | Icon in `"lucide:icon-name"` format (e.g., `"lucide:rocket"`) or an emoji |
 | `parent_collection_id` | string | No | ID of parent collection (creates subcollection) |
 
 **Response:**
@@ -401,7 +401,7 @@ Update a collection's name, description, or icon. Omit fields to leave them unch
 | `collection_id` | string | Yes | The collection ID |
 | `name` | string | No | New name |
 | `description` | string | No | New description |
-| `icon` | string | No | New emoji or icon identifier |
+| `icon` | string | No | Icon in `"lucide:icon-name"` format (e.g., `"lucide:rocket"`) or an emoji |
 
 **Response:**
 ```json

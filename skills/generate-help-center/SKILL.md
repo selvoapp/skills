@@ -250,7 +250,7 @@ Create the `.selvo/` directory if it does not exist. This file is your bookmark 
 
 For each planned collection:
 1. Call `list_collections` to check if a matching collection already exists.
-2. If it does not exist, call `create_collection` with name, description, and icon.
+2. If it does not exist, call `create_collection` with name, description, and icon. Icons use the format `"lucide:icon-name"` (e.g., `"lucide:book-open"`, `"lucide:rocket"`, `"lucide:settings"`).
 3. If the plan includes subcollections, create the parent collection first, then create each subcollection with `parent_collection_id` set to the parent's ID.
 4. Record the `collection_id` for article assignment. Articles go into the subcollection they belong to, not the parent.
 5. Update the plan file with the assigned `collection_id` values.
