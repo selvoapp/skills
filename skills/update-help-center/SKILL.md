@@ -4,30 +4,17 @@ description: >
   Detect and update stale help center articles on Selvo after code changes.
   Use when asked to "update docs", "sync documentation",
   "check for stale articles", or "refresh help center".
-  Requires Selvo MCP server connection.
+  Requires Selvo CLI (@selvo/cli).
 disable-model-invocation: true
 metadata:
   author: Selvo
-  version: 1.1.0
-  mcp-server: selvo
+  version: 2.0.0
 allowed-tools:
-  - mcp__selvo__get_help_center
-  - mcp__selvo__list_articles
-  - mcp__selvo__get_article
-  - mcp__selvo__create_article
-  - mcp__selvo__update_article
-  - mcp__selvo__update_article_content
-  - mcp__selvo__publish_article
-  - mcp__selvo__unpublish_article
-  - mcp__selvo__delete_article
-  - mcp__selvo__search_articles
-  - mcp__selvo__list_collections
-  - mcp__selvo__get_collection
-  - mcp__selvo__create_collection
   - Read
   - Glob
   - Grep
   - Bash
+  - Write
 ---
 
 A knowledge base should be a living set of documents, not a dusty old history book. This skill keeps it alive.
@@ -35,6 +22,12 @@ A knowledge base should be a living set of documents, not a dusty old history bo
 Every day your docs sit unchanged while the product moves forward, you are building what I call the Museum of the Previously True(ish) — a collection of articles that were accurate once, that nobody has checked since, and that AI tools are now confidently serving to your customers as current truth. Stale documentation is not a minor housekeeping problem. It is actively making things worse. This skill detects what drifted and helps you fix it before your customers (or their AI assistants) find out the hard way.
 
 $ARGUMENTS — Optional: `--since "1 week ago"`, `--full-scan`, `--dry-run`
+
+### Prerequisites check
+
+Run `selvo doctor` to verify the CLI is installed and authenticated. If it fails:
+- "command not found" → `npm install -g @selvo/cli`
+- "No API key found" → `selvo login`
 
 Read the style guide first -- you will need it during classification, not just when writing:
 - `Read(references/style-guide.md)`
@@ -91,8 +84,15 @@ Build a change summary listing only user-facing changes with their inferred impa
 
 ### Phase 2: MATCH — compare against existing articles
 
-1. Fetch all published articles: `list_articles(status: "published")`
-2. For each article, fetch full content: `get_article(article_id: "...")`
+1. Fetch all published articles:
+   ```bash
+   selvo articles list --status published --json
+   ```
+2. For each article, fetch full content as markdown:
+   ```bash
+   selvo articles get <id> --raw
+   ```
+   The `--raw` flag returns clean markdown content without metadata.
 3. Apply the Three-Question Test to each article against the detected changes:
    - Does this article reference any of the changed code, config, or UI elements?
    - Does this article describe behavior that was modified?
@@ -156,25 +156,50 @@ If more changes detected, prioritize in this order:
 For each finding, take action based on category:
 
 **STALE:**
-- Use `update_article_content` with `operation: "replace_section"`
-- Target the specific heading that needs updating
-- Preserve all other content unchanged (surgical update)
-- If multiple sections need updating, use `update_article` as fallback
-- Set `publish: false` — changes stay in draft buffer
+- Write the updated section content to a temp file, then use the CLI for a surgical update:
+  ```bash
+  mkdir -p .selvo/tmp
+  ```
+  Write the replacement content to `.selvo/tmp/patch-<slug>.md` using the Write tool.
+  Then apply the update:
+  ```bash
+  selvo articles content update <id> \
+    --operation replace_section \
+    --heading "Section heading" \
+    --file .selvo/tmp/patch-<slug>.md
+  ```
+  This updates only the targeted section — everything else stays unchanged. Changes go to the draft buffer (not published).
 
 **OUTDATED:**
 - Present to user: "This article needs a significant rewrite: [reason]"
-- Provide a full rewrite draft in your response
-- Do NOT call `update_article` without explicit user confirmation
+- Write a full rewrite draft to `.selvo/tmp/rewrite-<slug>.md`
+- Provide the draft in your response
+- Do NOT run `selvo articles update` without explicit user confirmation
+- When confirmed:
+  ```bash
+  selvo articles update <id> --file .selvo/tmp/rewrite-<slug>.md
+  ```
 
 **ORPHANED:**
 - Present to user: "This article describes [deleted feature]. Suggest archiving."
-- Do NOT call `delete_article` or `unpublish_article` without confirmation
+- Do NOT run `selvo articles unpublish` or `selvo articles delete` without confirmation
 
 **MISSING:**
-- Search before create: `search_articles(query: "[topic]")`
+- Search before create:
+  ```bash
+  selvo articles search "<topic>" --json
+  ```
 - If existing article found, suggest updating it instead
-- If no match, call `create_article` with `status: "draft"`
+- If no match, write the article to `.selvo/tmp/<slug>.md`, then create:
+  ```bash
+  selvo articles create \
+    --title "Article Title" \
+    --collection <collection_id> \
+    --file .selvo/tmp/<slug>.md \
+    --excerpt "Summary under 160 chars" \
+    --status draft \
+    --json
+  ```
 - Route to the best-matching collection (see `references/mapping.md`)
 - Follow article templates in `references/article-templates.md`
 

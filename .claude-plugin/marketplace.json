@@ -14,7 +14,7 @@
       "description": "Generate and maintain help center articles from your codebase. Two skills: generate-help-center creates articles by analyzing your code, update-help-center detects and fixes stale docs.",
       "source": "./",
       "strict": false,
-      "keywords": ["help-center", "documentation", "knowledge-base", "mcp", "content"],
+      "keywords": ["help-center", "documentation", "knowledge-base", "cli", "content"],
       "skills": [
         "./skills/generate-help-center",
         "./skills/update-help-center"

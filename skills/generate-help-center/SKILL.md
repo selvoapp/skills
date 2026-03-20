@@ -4,21 +4,12 @@ description: >
   Generate help center articles from your codebase on Selvo.
   Use when asked to "create help docs", "generate help center",
   "write support articles", or "set up knowledge base".
-  Requires Selvo MCP server connection.
+  Requires Selvo CLI (@selvo/cli).
 disable-model-invocation: true
 metadata:
   author: Selvo
-  version: 2.0.0
-  mcp-server: selvo
+  version: 3.0.0
 allowed-tools:
-  - mcp__selvo__get_help_center
-  - mcp__selvo__list_articles
-  - mcp__selvo__get_article
-  - mcp__selvo__create_article
-  - mcp__selvo__search_articles
-  - mcp__selvo__list_collections
-  - mcp__selvo__get_collection
-  - mcp__selvo__create_collection
   - Read
   - Glob
   - Grep
@@ -27,20 +18,23 @@ allowed-tools:
 ---
 
 Generate help center articles for a product by analyzing its codebase
-and publishing them to Selvo via MCP.
+and publishing them to Selvo via the CLI.
 
 $ARGUMENTS — Optional: specific topics to focus on, or "all" for full generation.
 
 ### Prerequisites check
 
-1. Verify Selvo MCP connection:
-   - Call `get_help_center` to confirm connection works.
-   - If it fails, tell the user to set up their MCP connection first:
+1. Verify the Selvo CLI is installed and authenticated:
+   - Run `selvo doctor` to confirm the CLI is set up and connected.
+   - If it fails with "command not found," tell the user to install:
+     ```bash
+     npm install -g @selvo/cli
      ```
-     claude mcp add --transport http selvo https://app.selvo.co/mcp \
-       --header "Authorization: Bearer YOUR_API_KEY"
+   - If it fails with "No API key found," tell the user to authenticate:
+     ```bash
+     selvo login
      ```
-   - Get an API key from Settings > API Keys in the Selvo dashboard.
+     Get an API key from Settings > API Keys in the Selvo dashboard.
 
 2. Check for an existing generation plan:
    - If `.selvo/generation-plan.json` exists, read it.
@@ -50,7 +44,7 @@ $ARGUMENTS — Optional: specific topics to focus on, or "all" for full generati
    - If the user says no, delete the plan file and start fresh.
 
 3. Check existing content:
-   - Call `list_collections` and `list_articles` to see what already exists.
+   - Run `selvo collections list --json` and `selvo articles list --json` to see what already exists.
    - If articles already exist, ask the user:
      "Your help center already has [N] articles in [M] collections.
       Do you want to add to the existing content or start fresh?"
@@ -249,10 +243,16 @@ Create the `.selvo/` directory if it does not exist. This file is your bookmark 
 ### Step 3: Create collections
 
 For each planned collection:
-1. Call `list_collections` to check if a matching collection already exists.
-2. If it does not exist, call `create_collection` with name, description, and icon. Icons use the format `"lucide:icon-name"` (e.g., `"lucide:book-open"`, `"lucide:rocket"`, `"lucide:settings"`).
-3. If the plan includes subcollections, create the parent collection first, then create each subcollection with `parent_collection_id` set to the parent's ID.
-4. Record the `collection_id` for article assignment. Articles go into the subcollection they belong to, not the parent.
+1. Run `selvo collections list --json` to check if a matching collection already exists.
+2. If it does not exist, run:
+   ```bash
+   selvo collections create --name "Collection Name" --description "Description" --icon "lucide:icon-name" --json
+   ```
+3. If the plan includes subcollections, create the parent collection first, then create each subcollection with `--parent`:
+   ```bash
+   selvo collections create --name "Subcollection" --parent col_xxx --json
+   ```
+4. Parse the `id` from the JSON response and record the `collection_id` for article assignment. Articles go into the subcollection they belong to, not the parent.
 5. Update the plan file with the assigned `collection_id` values.
 
 ### Step 4: Generate and create articles
@@ -277,15 +277,26 @@ For each planned article:
    - Do not read files from previous articles unless they are listed for the current one.
 2. Generate the article content following the matching template.
 3. Follow the style guide exactly.
-4. **Search before create:** Call `search_articles(query: "[article topic]")` to check for duplicates.
+4. **Search before create:** Run `selvo articles search "<article topic>" --json` to check for duplicates.
 5. If a matching article exists, ask the user whether to update it or skip.
-6. Call `create_article` with:
-   - `title`
-   - `collection_id` (from Step 3)
-   - `content` (markdown, following the template)
-   - `excerpt` (1-2 sentence summary, max 160 characters)
-   - `status: "draft"` — ALWAYS draft, never auto-publish
-7. **Update the plan file:** add the article ID to the `created` array.
+6. **Write the article to a temp file, then create via CLI:**
+   ```bash
+   # Create the temp directory if needed
+   mkdir -p .selvo/tmp
+   ```
+   Write the article markdown to `.selvo/tmp/<slug>.md` using the Write tool.
+   Then create it:
+   ```bash
+   selvo articles create \
+     --title "Article Title" \
+     --collection col_xxx \
+     --file .selvo/tmp/<slug>.md \
+     --excerpt "Short summary under 160 chars" \
+     --status draft \
+     --json
+   ```
+   Using `--file` instead of `--content` avoids shell escaping issues with long markdown content.
+7. **Update the plan file:** add the article ID from the JSON response to the `created` array.
 
 ### Step 5: Report results
 

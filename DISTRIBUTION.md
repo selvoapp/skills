@@ -9,27 +9,27 @@ All listing copy for submitting Selvo to external directories and skill registri
 ### Short Description (under 200 chars)
 
 ```
-Help center for SaaS teams. 14-tool MCP server for articles, collections, and search. Create, update, and publish help center content from any MCP client.
+Help center for SaaS teams. CLI and MCP server for articles, collections, and search. Create, update, and publish help center content from any AI agent.
 ```
 
 ### Long Description
 
 ```
-Selvo is a standalone help center for SaaS teams. The MCP server
-exposes 14 tools for managing your entire help center programmatically:
+Selvo is a standalone help center for SaaS teams. The skills use the
+Selvo CLI to manage your entire help center programmatically:
 
 - List, create, update, delete, publish, and unpublish articles
-- Manage collections (categories)
+- Manage collections (categories) with subcollections
 - Full-text search across your knowledge base
-- Read help center configuration
+- Surgical section-level content updates
+- Move and reorder articles and collections
 
-Works with Claude Code, Claude Desktop, Cursor, Windsurf, and any
-MCP-compatible client. Requires a Selvo account with an API key
-(Starter plan or above).
+Works with Claude Code, Codex, Cursor, Windsurf, and any
+agent that supports slash commands or skills. Requires a Selvo
+account with an API key (Starter plan or above).
 
-Endpoint: https://app.selvo.co/mcp
-Auth: Bearer token (API key from Settings > API Keys)
-Transport: Streamable HTTP
+CLI: npm install -g @selvo/cli
+Auth: selvo login (API key from Settings > API Keys)
 ```
 
 ### Tags
@@ -43,7 +43,7 @@ Transport: Streamable HTTP
 Category: Business & Marketing (or Development & Code Tools)
 
 ```markdown
-- [Selvo Help Center](https://github.com/selvoapp/skills) - Two skills for help center management: `/generate-help-center` creates articles from your codebase, `/update-help-center` detects and fixes stale docs. Publishes to Selvo via MCP. *By [@selvoapp](https://github.com/selvoapp)*
+- [Selvo Help Center](https://github.com/selvoapp/skills) - Two skills for help center management: `/generate-help-center` creates articles from your codebase, `/update-help-center` detects and fixes stale docs. Publishes to Selvo via CLI. *By [@selvoapp](https://github.com/selvoapp)*
 ```
 
 ---
@@ -65,7 +65,7 @@ Category: Business & Marketing (or Development & Code Tools)
 ## GitHub Topics
 
 ```bash
-gh repo edit selvoapp/skills --add-topic agent-skills,claude-code,mcp,help-center,documentation,knowledge-base
+gh repo edit selvoapp/skills --add-topic agent-skills,claude-code,cli,help-center,documentation,knowledge-base
 ```
 
 ---

@@ -86,8 +86,8 @@ For each changed file, place it into one of three categories.
 
 Do NOT use a static lookup table. Instead, match dynamically against the actual articles in the help center:
 
-1. Call `list_articles(status: "published")` to get all published articles
-2. Read each article's title, excerpt, and content
+1. Run `selvo articles list --status published --json` to get all published articles
+2. For each article, run `selvo articles get <id> --raw` to read its markdown content
 3. For each user-facing code change, apply the Three-Question Test (defined in SKILL.md):
    - Does this change affect how users set something up?
    - Does this change affect how a documented feature works?
@@ -102,10 +102,10 @@ This approach works for any codebase because it matches on meaning, not on file 
 
 When a code change requires a new article that does not match any existing article:
 
-1. Call `list_collections` to get all existing collections in this help center
+1. Run `selvo collections list --json` to get all existing collections in this help center
 2. Match the article's topic to the most relevant collection by name and description — read what the collection contains, not just its name
 3. If no collection matches well, suggest creating a new one and ask the user what to name it
-4. **Never hardcode collection names** — always use the actual collections returned by `list_collections`
+4. **Never hardcode collection names** — always use the actual collections returned by `selvo collections list`
 
 The following table is a fallback only, for when no collections exist yet or none match:
 

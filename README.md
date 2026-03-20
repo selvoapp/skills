@@ -27,19 +27,27 @@ git clone https://github.com/selvoapp/skills ~/.claude/skills/selvo
 
 </details>
 
-### 2. Connect Selvo MCP
+### 2. Install the Selvo CLI
 
-**Claude Code:**
 ```bash
-claude mcp add --transport http selvo https://app.selvo.co/mcp \
-  --header "Authorization: Bearer YOUR_API_KEY"
+npm install -g @selvo/cli
 ```
 
-**Cursor / Windsurf:** Add the MCP server in Settings > MCP with the URL `https://app.selvo.co/mcp` and your API key as a Bearer token header.
+### 3. Authenticate
 
-Get an API key from **Settings > API Keys** in your [Selvo dashboard](https://app.selvo.co).
+Create an API key in your [Selvo dashboard](https://app.selvo.co) under **Settings > API Keys**, then:
 
-### 3. Generate your help center
+```bash
+selvo login
+```
+
+Verify everything is connected:
+
+```bash
+selvo doctor
+```
+
+### 4. Generate your help center
 
 ```
 /generate-help-center
@@ -88,6 +96,7 @@ Automate documentation maintenance with GitHub Actions:
 
 - A [Selvo](https://selvo.co) account (Starter plan or above)
 - An API key from Settings > API Keys
+- The [Selvo CLI](https://www.npmjs.com/package/@selvo/cli) (`npm install -g @selvo/cli`)
 - An MCP-compatible AI agent (Claude Code, Codex, Cursor, Windsurf, etc.)
 
 ## License
