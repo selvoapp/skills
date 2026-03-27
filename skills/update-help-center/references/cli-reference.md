@@ -96,10 +96,13 @@ selvo articles create \
 | `--slug` | No | URL slug (auto-generated from title if omitted) |
 | `--seo-title` | No | SEO title override |
 | `--seo-description` | No | SEO meta description override |
+| `--no-writeback` | No | Skip writing uploaded image URLs back to the source file |
 
 *Use `--file` for anything longer than a sentence. It avoids shell escaping issues with markdown content.
 
-**Supported markdown:** headings, bold, italic, code blocks, callouts (`> [!NOTE]`), accordions (`<details>`), steps (`<Steps><Step title="...">body</Step></Steps>`), tables, links.
+**Auto-upload:** When using `--file`, local image paths in markdown (`![alt](./path.png)`) are automatically uploaded and replaced with public URLs. The source file is updated on disk so subsequent runs won't re-upload. Use `--no-writeback` to skip modifying the source file.
+
+**Supported markdown:** headings, bold, italic, code blocks, callouts (`> [!NOTE]`), accordions (`<details>`), steps (`<Steps><Step title="...">body</Step></Steps>`), tables, links, images.
 
 **Rule:** Always create with `--status draft`. Never auto-publish.
 
@@ -125,6 +128,9 @@ selvo articles update art_xxx --file ./updated.md --publish --json
 | `--seo-title` | SEO title override |
 | `--seo-description` | SEO meta description override |
 | `--publish` | Publish immediately after updating |
+| `--no-writeback` | Skip writing uploaded image URLs back to the source file |
+
+**Auto-upload:** Same as `articles create` — local image paths in `--file` markdown are auto-uploaded. Use `--no-writeback` to skip modifying the source file.
 
 **Use for:** Full content replacement. For surgical section edits, use `selvo articles content update`.
 
@@ -303,6 +309,32 @@ selvo collections reorder --ids col_xxx,col_yyy,col_zzz
 
 ---
 
+## Media
+
+### `selvo media upload`
+
+Upload an image and get a public URL. Supported types: JPEG, PNG, GIF, WebP, SVG, ICO. Max 10 MB for article images.
+
+```bash
+selvo media upload ./screenshot.png --json
+selvo media upload ./logo.svg --category hc-logo --json
+```
+
+| Flag | Description |
+|------|-------------|
+| `--category` | `article-image` (default), `hc-logo`, `hc-favicon`, `hc-hero-bg`, `collection-icon` |
+
+Returns:
+```json
+{ "url": "https://...", "filename": "screenshot.png", "content_type": "image/png", "size": 245760 }
+```
+
+**Use for:** Uploading images before referencing them in article markdown, or uploading help center branding assets.
+
+**Tip:** When using `--file` with `articles create` or `articles update`, local image paths are auto-uploaded — you don't need to upload manually in that workflow.
+
+---
+
 ## Common Patterns
 
 ### Search before create
@@ -338,6 +370,24 @@ selvo articles content update art_xxx \
 ```bash
 # Write new content to .selvo/tmp/rewrite.md
 selvo articles update art_xxx --file .selvo/tmp/rewrite.md
+```
+
+### Articles with local images (auto-upload)
+```bash
+# article.md contains: ![Setup](./images/setup.png)
+selvo articles create \
+  --title "Setup Guide" \
+  --collection col_xxx \
+  --file ./article.md \
+  --status draft \
+  --json
+# → Uploads ./images/setup.png, replaces path with URL in article.md, sends to API
+```
+
+### Upload first, then reference (manual workflow)
+```bash
+url=$(selvo media upload ./diagram.png --json | jq -r '.url')
+# Write markdown referencing $url, then create article
 ```
 
 ### Batch create from a directory
